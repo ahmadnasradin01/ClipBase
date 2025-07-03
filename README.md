@@ -21,9 +21,15 @@ A powerful and flexible command-line tool to convert a local project directory i
 
 You need Python 3.6+ installed and on your system's PATH.
 
-1.  **Create the files**: Create the directory structure and files as listed above (`setup.py`, `clipbase/` directory, etc.).
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/ahmadnasradin01/ClipBase.git
+    ```
 
-2.  **Open Terminal/CMD/PowerShell**: Navigate to the root directory where you created `setup.py`.
+2.  **Navigate to the project directory**:
+    ```bash
+    cd ClipBase
+    ```
 
 3.  **Install the package**: Run the following command to install `clipbase` globally on your system in "editable" mode. This means any changes you make to the script are immediately available.
 
