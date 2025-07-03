@@ -1,0 +1,2 @@
+[console_scripts]
+getcodebase = getcodebase.cli:main
