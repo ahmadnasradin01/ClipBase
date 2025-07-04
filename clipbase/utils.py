@@ -15,35 +15,43 @@ def is_binary_by_content(filepath):
     except IOError:
         return True
 
-def gitignore_to_regex(pattern):
+def get_gitignore_patterns(gitignore_path):
+    """Reads and returns patterns from a .gitignore file."""
+    if not os.path.exists(gitignore_path):
+        return []
+    with open(gitignore_path, 'r', encoding='utf-8', errors='ignore') as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+
+def gitignore_to_regex(pattern, is_dir_only=False):
     """Converts a .gitignore pattern to a regex pattern."""
     if pattern.startswith('!'):
-        # Negated patterns are handled separately
-        return None, gitignore_to_regex(pattern[1:])[0]
+        return None, gitignore_to_regex(pattern[1:], is_dir_only)[0]
 
     regex = ''
+    # Anchor the pattern to the start if it begins with a slash
     if pattern.startswith('/'):
         regex += '^'
         pattern = pattern[1:]
-    elif '/**/' in pattern:
-        pattern = pattern.replace('**/', '(.*/)?')
-    elif pattern.startswith('**/'):
-        pattern = pattern.replace('**/', '(.*/)?')
-    elif '/' in pattern:
-        # Patterns with slashes that don't start with one can match anywhere
-        pass
-    else:
-        # Patterns without slashes match at any level
-        regex += '(^|.*/)'
+    # If the pattern does not contain a slash, it should match anywhere
+    elif '/' not in pattern:
+        regex += '(.*/)?'
 
-    # Escape special regex characters, but keep our wildcards
-    pattern = re.escape(pattern).replace(r'\*', '.*').replace(r'\?', '.')
-
+    # Handle directory-only patterns
     if pattern.endswith('/'):
-        regex += pattern + '.*'
-    else:
-        regex += pattern + '(/.*)?$'
+        is_dir_only = True
+        pattern = pattern[:-1]
+
+    # Escape the pattern and convert gitignore wildcards to regex wildcards
+    pattern = re.escape(pattern).replace(r'\*\*', '.*').replace(r'\*', '[^/]*').replace(r'\?', '.')
     
+    regex += pattern
+    
+    if is_dir_only:
+        regex += '(/.*)?$'
+    else:
+        # Match files or directories
+        regex += '(/.*)?$'
+
     return re.compile(regex), None
 
 def is_ignored(path, ignore_rules):
@@ -51,13 +59,17 @@ def is_ignored(path, ignore_rules):
     Checks if a path should be ignored based on a list of regex rules.
     Handles negation ('!') correctly.
     """
+    path_to_check = path.replace(os.sep, '/')
+    if not path_to_check.startswith('/'):
+        path_to_check = '/' + path_to_check
+
     ignored = False
-    path = path.replace(os.sep, '/') # Use forward slashes for matching
     for ignore_regex, negate_regex in ignore_rules:
-        if ignore_regex and ignore_regex.match(path):
+        if ignore_regex and ignore_regex.search(path_to_check):
             ignored = True
-        if negate_regex and negate_regex.match(path):
-            ignored = False
+        if negate_regex and negate_regex.search(path_to_check):
+            ignored = False # Un-ignore if a negation pattern matches
+    
     return ignored
 
 def build_file_tree(file_paths):
